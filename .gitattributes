@@ -1,0 +1,8 @@
+# Store text with LF endings so checkouts behave the same on Windows, Linux
+# and macOS (shell scripts run inside Linux containers).
+* text=auto eol=lf
+
+*.ttf binary
+*.png binary
+*.jpg binary
+*.pdf binary
