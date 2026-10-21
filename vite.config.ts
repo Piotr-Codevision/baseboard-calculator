@@ -22,6 +22,9 @@ function base64Import(): Plugin {
 }
 
 export default defineConfig({
+  // Public path the app is served from: "/" for Docker/Nginx and local dev,
+  // "/<repo>/" for GitHub Pages (set by the Pages workflow).
+  base: process.env.BASE_PATH || '/',
   plugins: [base64Import(), react()],
   test: {
     environment: 'jsdom',
