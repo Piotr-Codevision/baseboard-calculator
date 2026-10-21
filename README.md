@@ -1,5 +1,7 @@
 # Baseboard Calculator
 
+[![CI](https://github.com/Piotr-Codevision/baseboard-calculator/actions/workflows/ci.yml/badge.svg)](https://github.com/Piotr-Codevision/baseboard-calculator/actions/workflows/ci.yml)
+
 A small web app for interior designers that works out how many standard-length baseboards (skirting boards) a project needs — without splicing scraps together on a wall.
 
 Enter your wall lengths, set the stock board length, and get the number of boards to buy, the expected waste, and a per-wall cutting breakdown you can export as a PDF.
@@ -47,6 +49,19 @@ See [doc/DEPLOYMENT.md](doc/DEPLOYMENT.md) for production builds, web servers (N
 | `npm test` | Run the unit and UI tests once |
 | `npm run test:watch` | Run the tests in watch mode |
 | `npm run lint` | Lint the source |
+
+## Continuous integration
+
+Every pull request and every push to `main` runs [`.github/workflows/ci.yml`](.github/workflows/ci.yml) on GitHub Actions:
+
+- **Lint, test & build** on Node.js 20 and 22 — `npm run lint`, the full test suite (`npm test`: calculation engine, units, offcut notes, translations, project files, PDF report and UI interactions), and `npm run build`, which also type-checks the code.
+- **Docker image build** — makes sure the production image still builds.
+
+Run the same checks locally before opening a pull request:
+
+```bash
+npm ci && npm run lint && npm test && npm run build
+```
 
 ## Tech stack
 
