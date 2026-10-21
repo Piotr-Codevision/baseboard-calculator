@@ -6,6 +6,8 @@ A small web app for interior designers that works out how many standard-length b
 
 Enter your wall lengths, set the stock board length, and get the number of boards to buy, the expected waste, and a per-wall cutting breakdown you can export as a PDF.
 
+**Try it:** https://piotr-codevision.github.io/baseboard-calculator/
+
 ## Features
 
 - **Wall table** — add, edit and delete walls with a label, length, quantity and notes. A quick-entry field lets you type a length and press Enter to add walls one after another (accepts `2.4` or `2,4`).
@@ -62,6 +64,22 @@ Run the same checks locally before opening a pull request:
 ```bash
 npm ci && npm run lint && npm test && npm run build
 ```
+
+## Preview deployment (GitHub Pages)
+
+[`.github/workflows/pages.yml`](.github/workflows/pages.yml) publishes the app to https://piotr-codevision.github.io/baseboard-calculator/ for manual checking:
+
+- **Automatically** on every push to `main`.
+- **On demand** for any branch: *Actions → Deploy to GitHub Pages → Run workflow*, pick the branch under *Use workflow from*, then *Run workflow*.
+
+There is one Pages site per repository, so each deploy replaces the previous one. The workflow run's summary shows which branch and commit is currently live. Saved projects live in each visitor's browser, so nothing is shared between users.
+
+One-time setup in the repository settings:
+
+1. *Settings → Pages → Build and deployment → Source:* **GitHub Actions**.
+2. To deploy branches other than `main`: *Settings → Environments → github-pages → Deployment branches and tags* — allow all branches (or add a pattern such as `*`). By default only `main` may deploy.
+
+To build for a sub-path locally: `BASE_PATH=/baseboard-calculator/ npm run build`.
 
 ## Tech stack
 
