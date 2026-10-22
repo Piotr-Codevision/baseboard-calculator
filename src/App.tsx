@@ -8,6 +8,7 @@ import { WallTable } from './components/WallTable'
 import { SummaryDashboard } from './components/SummaryDashboard'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { QuickAddWall } from './components/QuickAddWall'
+import { ConfirmDialog } from './components/ConfirmDialog'
 import { convertLength } from './calc/units'
 import { downloadTextFile, buildTimestampedFilename } from './io/download'
 import { serializeProject, readProjectFile, ProjectFileError } from './io/projectFile'
@@ -42,9 +43,22 @@ export default function App() {
   const [result, setResult] = useState<CalculationResult | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [confirmingClear, setConfirmingClear] = useState(false)
+  // Bumped on "Clear all" to remount components that keep their own state.
+  const [resetKey, setResetKey] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const clearButtonRef = useRef<HTMLButtonElement>(null)
 
   const unitLabel = useMemo(() => unit, [unit])
+
+  const isPristine =
+    walls.length === 1 &&
+    isUntouchedWall(walls[0], 1) &&
+    baseLength === DEFAULT_BASE_LENGTH &&
+    unit === DEFAULT_UNIT &&
+    !result &&
+    !error &&
+    !loadError
 
   function handleWallChange(id: string, field: keyof Wall, value: string | number) {
     setWalls((prev) =>
@@ -128,6 +142,26 @@ export default function App() {
         setLoadError(String(err))
       }
     }
+  }
+
+  /**
+   * Resets the project to a fresh start: one empty wall, default stock length
+   * and unit, no result or errors. The language is a preference and is kept.
+   */
+  function handleClearAll() {
+    setWalls([createWallWithDefaultLabel(1)])
+    setBaseLength(DEFAULT_BASE_LENGTH)
+    setUnit(DEFAULT_UNIT)
+    setResult(null)
+    setError(null)
+    setLoadError(null)
+    setResetKey((key) => key + 1)
+    setConfirmingClear(false)
+  }
+
+  function closeClearDialog() {
+    setConfirmingClear(false)
+    clearButtonRef.current?.focus()
   }
 
   function handleExportPdf() {
@@ -218,7 +252,29 @@ export default function App() {
               {t('loadError')}: {loadError}
             </span>
           )}
+          {/* Kept apart from the other actions and guarded by a confirmation. */}
+          <button
+            ref={clearButtonRef}
+            type="button"
+            onClick={() => setConfirmingClear(true)}
+            disabled={isPristine}
+            className="ml-auto border border-red-300 text-red-700 rounded px-4 py-2 text-sm font-medium hover:bg-red-50 disabled:cursor-not-allowed disabled:border-gray-200 disabled:text-gray-400 disabled:hover:bg-transparent"
+            data-testid="clear-all-button"
+          >
+            {t('clearAll')}
+          </button>
         </section>
+
+        {confirmingClear && (
+          <ConfirmDialog
+            title={t('clearAllTitle')}
+            message={t('clearAllMessage')}
+            confirmLabel={t('clearAllConfirm')}
+            cancelLabel={t('cancel')}
+            onConfirm={handleClearAll}
+            onCancel={closeClearDialog}
+          />
+        )}
 
         <section className="mb-8 bg-gray-50 border border-gray-200 rounded-lg p-4">
           <h2 className="text-lg font-semibold mb-3">{t('baseboardConfig')}</h2>
@@ -262,7 +318,12 @@ export default function App() {
         <section className="mb-6">
           <div className="flex flex-wrap items-start justify-between gap-2 mb-3">
             <h2 className="text-lg font-semibold pt-1">{t('walls')}</h2>
-            <QuickAddWall unit={unitLabel} onAdd={handleAddWall} />
+            <QuickAddWall
+              key={resetKey}
+              unit={unitLabel}
+              onAdd={handleAddWall}
+              autoFocus={resetKey > 0}
+            />
           </div>
           <WallTable
             walls={walls}

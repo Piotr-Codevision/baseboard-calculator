@@ -213,6 +213,125 @@ describe('App', () => {
     })
   })
 
+  describe('Clear all', () => {
+    async function fillProject(user: ReturnType<typeof userEvent.setup>) {
+      const quickInput = screen.getByTestId('quick-add-input')
+      await user.type(quickInput, '120{Enter}')
+      await user.type(quickInput, '80{Enter}')
+      await user.selectOptions(screen.getByLabelText('Unit'), 'm')
+      await user.click(screen.getByTestId('calculate-button'))
+      await user.type(quickInput, '3')
+    }
+
+    it('is disabled while there is nothing to clear', async () => {
+      const user = userEvent.setup()
+      renderApp()
+
+      const clearButton = screen.getByTestId('clear-all-button')
+      expect(clearButton).toBeDisabled()
+
+      await user.type(screen.getByTestId('quick-add-input'), '120{Enter}')
+      expect(clearButton).toBeEnabled()
+    })
+
+    it('asks for confirmation with Cancel focused, and Cancel keeps everything', async () => {
+      const user = userEvent.setup()
+      renderApp()
+      await fillProject(user)
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      const dialog = screen.getByRole('alertdialog', { name: 'Clear the whole project?' })
+      expect(dialog).toHaveTextContent('save the project or export the PDF first')
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+
+      await user.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(screen.getAllByTestId(/^wall-row-/)).toHaveLength(2)
+      expect(screen.getByTestId('summary-dashboard')).toBeInTheDocument()
+      expect(screen.getByTestId('clear-all-button')).toHaveFocus()
+    })
+
+    it('does not clear on Enter, Escape or a click outside the dialog', async () => {
+      const user = userEvent.setup()
+      renderApp()
+      await fillProject(user)
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      await user.keyboard('{Enter}')
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      await user.click(screen.getByTestId('confirm-backdrop'))
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+
+      expect(screen.getAllByTestId(/^wall-row-/)).toHaveLength(2)
+      expect(screen.getByTestId('summary-dashboard')).toBeInTheDocument()
+    })
+
+    it('keeps keyboard focus inside the dialog', async () => {
+      const user = userEvent.setup()
+      renderApp()
+      await fillProject(user)
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      const dialog = screen.getByRole('alertdialog')
+      const cancel = within(dialog).getByRole('button', { name: 'Cancel' })
+      const confirm = within(dialog).getByRole('button', { name: 'Yes, clear all' })
+
+      await user.tab()
+      expect(confirm).toHaveFocus()
+      await user.tab()
+      expect(cancel).toHaveFocus()
+      await user.tab({ shift: true })
+      expect(confirm).toHaveFocus()
+    })
+
+    it('resets walls, stock length, unit, results and saved data after confirming', async () => {
+      const user = userEvent.setup()
+      renderApp()
+      await fillProject(user)
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      await user.click(screen.getByRole('button', { name: 'Yes, clear all' }))
+
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(screen.getAllByTestId(/^wall-row-/)).toHaveLength(1)
+      expect(screen.getByLabelText('Label')).toHaveValue('w1')
+      expect(screen.getByLabelText('Length')).toHaveValue(0)
+      expect(screen.getByLabelText(/Standard baseboard stock length/i)).toHaveValue(240)
+      expect(screen.getByLabelText('Unit')).toHaveValue('cm')
+      expect(screen.queryByTestId('summary-dashboard')).not.toBeInTheDocument()
+      expect(screen.getByTestId('clear-all-button')).toBeDisabled()
+
+      const quickInput = screen.getByTestId('quick-add-input')
+      expect(quickInput).toHaveValue('')
+      expect(quickInput).toHaveFocus()
+
+      expect(JSON.parse(window.localStorage.getItem('baseboard-calc-walls')!)).toHaveLength(1)
+      expect(window.localStorage.getItem('baseboard-calc-base-length')).toBe('240')
+      expect(window.localStorage.getItem('baseboard-calc-unit')).toBe('"cm"')
+    })
+
+    it('keeps the chosen language and shows the dialog in Polish', async () => {
+      const user = userEvent.setup()
+      renderApp()
+      await user.selectOptions(screen.getByLabelText(/Language/i), 'pl')
+      await user.type(screen.getByTestId('quick-add-input'), '120{Enter}')
+
+      await user.click(screen.getByRole('button', { name: 'Wyczyść wszystko' }))
+      expect(screen.getByRole('alertdialog', { name: 'Wyczyścić cały projekt?' })).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Tak, wyczyść wszystko' }))
+
+      expect(screen.getByText('Kalkulator Listew Przypodłogowych')).toBeInTheDocument()
+      expect(screen.getByLabelText('Długość')).toHaveValue(0)
+    })
+  })
+
   it('switches language to Polish', async () => {
     const user = userEvent.setup()
     renderApp()
