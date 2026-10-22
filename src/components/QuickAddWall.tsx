@@ -5,6 +5,8 @@ import { parseLengthInput } from '../calc/units'
 interface QuickAddWallProps {
   unit: string
   onAdd: (length?: number) => void
+  /** Focus the length field on mount (used after "Clear all"). */
+  autoFocus?: boolean
 }
 
 /**
@@ -13,7 +15,7 @@ interface QuickAddWallProps {
  * field and keeps focus on it for rapid entry. With the field empty the
  * button adds a blank row, as before.
  */
-export function QuickAddWall({ unit, onAdd }: QuickAddWallProps) {
+export function QuickAddWall({ unit, onAdd, autoFocus = false }: QuickAddWallProps) {
   const { t } = useLanguage()
   const [value, setValue] = useState('')
   const [invalid, setInvalid] = useState(false)
@@ -40,6 +42,7 @@ export function QuickAddWall({ unit, onAdd }: QuickAddWallProps) {
       <div>
         <input
           ref={inputRef}
+          autoFocus={autoFocus}
           type="text"
           inputMode="decimal"
           value={value}
