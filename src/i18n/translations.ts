@@ -37,7 +37,7 @@ export const translations = {
     clearAll: 'Clear all',
     clearAllTitle: 'Clear the whole project?',
     clearAllMessage:
-      'All walls and results will be removed, and the stock length and unit reset to 240 cm. This cannot be undone — save the project or export the PDF first if you may need it again.',
+      'All walls and results will be removed, and the stock length and unit reset to {length}. This cannot be undone — save the project or export the PDF first if you may need it again.',
     clearAllConfirm: 'Yes, clear all',
     cancel: 'Cancel',
     loadError: 'Load error',
@@ -84,7 +84,7 @@ export const translations = {
     clearAll: 'Wyczyść wszystko',
     clearAllTitle: 'Wyczyścić cały projekt?',
     clearAllMessage:
-      'Wszystkie ściany i wyniki zostaną usunięte, a długość listwy i jednostka wrócą do 240 cm. Tej operacji nie można cofnąć — jeśli projekt może być jeszcze potrzebny, najpierw go zapisz lub wyeksportuj PDF.',
+      'Wszystkie ściany i wyniki zostaną usunięte, a długość listwy i jednostka wrócą do {length}. Tej operacji nie można cofnąć — jeśli projekt może być jeszcze potrzebny, najpierw go zapisz lub wyeksportuj PDF.',
     clearAllConfirm: 'Tak, wyczyść wszystko',
     cancel: 'Anuluj',
     loadError: 'Błąd wczytywania',

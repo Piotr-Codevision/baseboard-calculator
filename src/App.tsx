@@ -47,7 +47,6 @@ export default function App() {
   // Bumped on "Clear all" to remount components that keep their own state.
   const [resetKey, setResetKey] = useState(0)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const clearButtonRef = useRef<HTMLButtonElement>(null)
 
   const unitLabel = useMemo(() => unit, [unit])
 
@@ -159,11 +158,6 @@ export default function App() {
     setConfirmingClear(false)
   }
 
-  function closeClearDialog() {
-    setConfirmingClear(false)
-    clearButtonRef.current?.focus()
-  }
-
   function handleExportPdf() {
     try {
       setError(null)
@@ -254,7 +248,6 @@ export default function App() {
           )}
           {/* Kept apart from the other actions and guarded by a confirmation. */}
           <button
-            ref={clearButtonRef}
             type="button"
             onClick={() => setConfirmingClear(true)}
             disabled={isPristine}
@@ -268,11 +261,14 @@ export default function App() {
         {confirmingClear && (
           <ConfirmDialog
             title={t('clearAllTitle')}
-            message={t('clearAllMessage')}
+            message={t('clearAllMessage').replace(
+              '{length}',
+              `${DEFAULT_BASE_LENGTH} ${DEFAULT_UNIT}`,
+            )}
             confirmLabel={t('clearAllConfirm')}
             cancelLabel={t('cancel')}
             onConfirm={handleClearAll}
-            onCancel={closeClearDialog}
+            onCancel={() => setConfirmingClear(false)}
           />
         )}
 

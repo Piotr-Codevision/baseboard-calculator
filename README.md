@@ -17,6 +17,7 @@ Enter your wall lengths, set the stock board length, and get the number of board
 - **Units** — centimetres, metres or inches; switching converts all values.
 - **PDF report** — a printable A4 report of the result, with full Polish character support.
 - **Save / load** — projects are kept in the browser automatically and can be saved to or loaded from a JSON file.
+- **Clear all** — start a new project in one step (walls, results, stock length and unit are reset; the language is kept). It asks for confirmation first, with *Cancel* as the default.
 - **Languages** — English and Polish, including correct Polish plural forms.
 
 ## Quick start
