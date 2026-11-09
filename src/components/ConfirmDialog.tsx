@@ -1,4 +1,5 @@
-import { useEffect, useId, useRef, type KeyboardEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 
 interface ConfirmDialogProps {
   title: string
@@ -12,7 +13,13 @@ interface ConfirmDialogProps {
 /**
  * Modal confirmation for destructive actions. Cancel is focused when it
  * opens, so Enter or Escape never confirms by accident; clicking the
- * backdrop also cancels. Focus stays inside the dialog while it is open.
+ * backdrop also cancels.
+ *
+ * While open, the rest of the page is made `inert` (hidden from screen
+ * readers, unclickable and unfocusable) and does not scroll; Escape and Tab
+ * are handled at document level so they keep working even when focus has
+ * drifted off the buttons. On close, focus returns to the element that
+ * opened the dialog unless something else has claimed it.
  */
 export function ConfirmDialog({
   title,
@@ -24,30 +31,68 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const titleId = useId()
   const messageId = useId()
+  const backdropRef = useRef<HTMLDivElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
+  // True only when the current click started on the backdrop itself, so a
+  // drag from inside the dialog out onto the backdrop does not cancel.
+  const pressStartedOnBackdrop = useRef(false)
+  const onCancelRef = useRef(onCancel)
+  onCancelRef.current = onCancel
 
-  useEffect(() => {
+  // Layout effect: the page must be interactive again before anything that
+  // mounts in the same commit (e.g. an autoFocus field) tries to take focus.
+  useLayoutEffect(() => {
+    const backdrop = backdropRef.current
+    const opener = document.activeElement as HTMLElement | null
+    const madeInert: Element[] = []
+    for (const el of Array.from(document.body.children)) {
+      if (el !== backdrop && !el.hasAttribute('inert')) {
+        el.setAttribute('inert', '')
+        madeInert.push(el)
+      }
+    }
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     cancelRef.current?.focus()
+
+    return () => {
+      madeInert.forEach((el) => el.removeAttribute('inert'))
+      document.body.style.overflow = previousOverflow
+      const active = document.activeElement
+      const focusIsUnclaimed =
+        !active || active === document.body || (backdrop?.contains(active) ?? false)
+      if (focusIsUnclaimed && opener && opener !== document.body) opener.focus()
+    }
   }, [])
 
-  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
-    if (e.key === 'Escape') {
-      e.preventDefault()
-      onCancel()
-    } else if (e.key === 'Tab') {
-      // Two buttons only: keep Tab / Shift+Tab cycling between them.
-      e.preventDefault()
-      const next = document.activeElement === cancelRef.current ? confirmRef : cancelRef
-      next.current?.focus()
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        onCancelRef.current()
+      } else if (e.key === 'Tab') {
+        // Two buttons only: Tab / Shift+Tab cycle between them, and pull
+        // focus back in if it has drifted elsewhere.
+        e.preventDefault()
+        const next = document.activeElement === cancelRef.current ? confirmRef : cancelRef
+        next.current?.focus()
+      }
     }
-  }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
-  return (
+  return createPortal(
     <div
+      ref={backdropRef}
       className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 px-4"
+      onMouseDown={(e) => {
+        pressStartedOnBackdrop.current = e.target === e.currentTarget
+      }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onCancel()
+        if (pressStartedOnBackdrop.current && e.target === e.currentTarget) onCancel()
+        pressStartedOnBackdrop.current = false
       }}
       data-testid="confirm-backdrop"
     >
@@ -56,8 +101,8 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={messageId}
-        onKeyDown={handleKeyDown}
-        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+        tabIndex={-1}
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl outline-none"
       >
         <h2 id={titleId} className="text-lg font-semibold">
           {title}
@@ -84,6 +129,7 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

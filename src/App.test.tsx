@@ -329,6 +329,106 @@ describe('App', () => {
 
       expect(screen.getByText('Kalkulator Listew Przypodłogowych')).toBeInTheDocument()
       expect(screen.getByLabelText('Długość')).toHaveValue(0)
+      expect(window.localStorage.getItem('baseboard-calc-language')).toBe('pl')
+    })
+
+    it('names the default stock length it resets to', async () => {
+      const user = userEvent.setup()
+      renderApp()
+      await fillProject(user)
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      expect(screen.getByRole('alertdialog')).toHaveTextContent('reset to 240 cm.')
+    })
+
+    it('keeps Escape and Tab working after clicking the dialog text', async () => {
+      const user = userEvent.setup()
+      renderApp()
+      await fillProject(user)
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      const dialog = screen.getByRole('alertdialog')
+      await user.click(within(dialog).getByText(/This cannot be undone/))
+      expect(dialog).toContainElement(document.activeElement as HTMLElement)
+
+      await user.tab()
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus()
+
+      await user.click(within(dialog).getByText(/This cannot be undone/))
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      expect(screen.getAllByTestId(/^wall-row-/)).toHaveLength(2)
+    })
+
+    it('makes the page behind inert and unscrollable while open', async () => {
+      const user = userEvent.setup()
+      const { container } = renderApp()
+      await fillProject(user)
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      expect(container).toHaveAttribute('inert')
+      expect(screen.getByTestId('confirm-backdrop')).not.toHaveAttribute('inert')
+      expect(document.body.style.overflow).toBe('hidden')
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }))
+      expect(container).not.toHaveAttribute('inert')
+      expect(document.body.style.overflow).toBe('')
+    })
+
+    it('does not cancel when a drag starts inside the dialog and ends on the backdrop', async () => {
+      const user = userEvent.setup()
+      renderApp()
+      await fillProject(user)
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      const backdrop = screen.getByTestId('confirm-backdrop')
+      const text = within(screen.getByRole('alertdialog')).getByText(/This cannot be undone/)
+      await user.pointer([
+        { keys: '[MouseLeft>]', target: text },
+        { pointerName: 'mouse', target: backdrop },
+        { keys: '[/MouseLeft]', target: backdrop },
+      ])
+
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    })
+
+    it('clears a calculation error, and is enabled by one alone', async () => {
+      const user = userEvent.setup()
+      renderApp()
+
+      await user.click(screen.getByTestId('calculate-button'))
+      expect(screen.getByTestId('calc-error')).toBeInTheDocument()
+      expect(screen.getByTestId('clear-all-button')).toBeEnabled()
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      await user.click(screen.getByRole('button', { name: 'Yes, clear all' }))
+      expect(screen.queryByTestId('calc-error')).not.toBeInTheDocument()
+      expect(screen.getByTestId('clear-all-button')).toBeDisabled()
+    })
+
+    it('clears a load error, and is enabled by one alone', async () => {
+      const user = userEvent.setup()
+      renderApp()
+
+      const file = new File(['not valid json'], 'bad.json', { type: 'application/json' })
+      await user.upload(screen.getByTestId('load-file-input'), file)
+      expect(await screen.findByTestId('load-error')).toBeInTheDocument()
+      expect(screen.getByTestId('clear-all-button')).toBeEnabled()
+
+      await user.click(screen.getByTestId('clear-all-button'))
+      await user.click(screen.getByRole('button', { name: 'Yes, clear all' }))
+      expect(screen.queryByTestId('load-error')).not.toBeInTheDocument()
+    })
+
+    it('is disabled again when the project is put back to its starting state by hand', async () => {
+      const user = userEvent.setup()
+      renderApp()
+
+      await user.click(screen.getByRole('button', { name: /Add Wall/i }))
+      expect(screen.getByTestId('clear-all-button')).toBeEnabled()
+
+      await user.click(screen.getAllByRole('button', { name: /Delete/i })[1])
+      expect(screen.getByTestId('clear-all-button')).toBeDisabled()
     })
   })
 
